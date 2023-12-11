@@ -1,0 +1,6 @@
+@biometricService_HostAddress = http://localhost:5111
+
+GET {{biometricService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
