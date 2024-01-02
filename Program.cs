@@ -6,21 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddHttpClient("InnovatricsApi", client =>
-{
-    client.BaseAddress = new Uri("https://dot.innovatrics.com");
-}).AddHttpMessageHandler<BearerTokenHandler>();
-
 builder.Services.AddTransient<BearerTokenHandler>();
-
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
+builder.Services.AddScoped<IInnovatricsService, InnovatricsService>();
+
+builder.Services.AddTransient<IHttpService>(provider =>
+{
+    var tokenService = provider.GetRequiredService<ITokenService>();
+    return new HttpService("https://dot.innovatrics.com", tokenService);
+});
+builder.Services.AddTransient<ITokenService, TokenService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
     sqlServerOptionsAction: sqlOptions =>
     {
-        sqlOptions.EnableRetryOnFailure();     
+        sqlOptions.EnableRetryOnFailure();
     }
     ));
 
@@ -30,6 +33,7 @@ builder.Services.AddCors(option =>
     {
         builder.AllowAnyOrigin();
         builder.AllowAnyHeader();
+        builder.AllowAnyMethod();
     });
 });
 builder.Services.AddControllers();

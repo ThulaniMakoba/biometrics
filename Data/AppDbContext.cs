@@ -11,7 +11,22 @@ namespace biometricService.Data
             modelBuilder.Entity<User>()
             .Property(u => u.Id)
             .ValueGeneratedOnAdd();
+
+            modelBuilder.Entity<User>()
+                .HasMany(a => a.Faces)
+                .WithOne(b => b.User)
+                .HasForeignKey(b => b.UserId);         
+
+            modelBuilder.Entity<FaceData>()
+              .Property(f => f.Id)
+              .ValueGeneratedOnAdd();
+
+            modelBuilder.Entity<LogTransaction>()
+                .Property(l => l.Id)
+                .ValueGeneratedOnAdd();
         }
         public DbSet<User> Users { get; set; }
+        public DbSet<FaceData> FaceData { get; set; }
+        public DbSet<LogTransaction> LogTransaction { get; set; }
     }
 }

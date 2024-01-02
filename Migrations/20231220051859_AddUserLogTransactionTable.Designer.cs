@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using biometricService.Data;
 
@@ -11,9 +12,11 @@ using biometricService.Data;
 namespace biometricService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231220051859_AddUserLogTransactionTable")]
+    partial class AddUserLogTransactionTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,26 +67,6 @@ namespace biometricService.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("FaceData");
-                });
-
-            modelBuilder.Entity("biometricService.Data.Entities.LogTransaction", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("TimeStamp")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("TransactionDetails")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LogTransaction");
                 });
 
             modelBuilder.Entity("biometricService.Data.Entities.User", b =>
@@ -149,6 +132,31 @@ namespace biometricService.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("biometricService.Data.Entities.UserLogTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("TimeStamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransactionDetails")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserLogTransaction");
+                });
+
             modelBuilder.Entity("biometricService.Data.Entities.FaceData", b =>
                 {
                     b.HasOne("biometricService.Data.Entities.User", "User")
@@ -160,9 +168,22 @@ namespace biometricService.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("biometricService.Data.Entities.UserLogTransaction", b =>
+                {
+                    b.HasOne("biometricService.Data.Entities.User", "User")
+                        .WithMany("LogTransactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("biometricService.Data.Entities.User", b =>
                 {
                     b.Navigation("Faces");
+
+                    b.Navigation("LogTransactions");
                 });
 #pragma warning restore 612, 618
         }

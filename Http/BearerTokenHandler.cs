@@ -3,7 +3,7 @@ namespace biometricService.Http
 {
     public class BearerTokenHandler: DelegatingHandler
     {
-        private readonly string token = "Token";
+        private readonly string token = "RElTX3RyaWFsXzYwNzpVdFl3dTJkTlNyMVJKaFRMSVVMZFM0a2doT2gwZzZ5Vg==";
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

@@ -2,7 +2,7 @@
 
 namespace biometricService.Data.Entities
 {
-    public class User
+    public class User : BaseEntity
     {
         [Key]
         public int Id { get; set; }
@@ -17,6 +17,12 @@ namespace biometricService.Data.Entities
         [EmailAddress]
         public string Email { get; set; }
         [Required]
-        public string InnovatricsId { get; set; }
+        public Guid InnovatricsFaceId { get; set; }
+        public string? ComputerSID { get; set; }
+        public Guid? WindowsProfileId { get; set; }
+        public string? MobileIMEI { get; set; }
+        public bool Deleted { get; set; }
+
+        public ICollection<FaceData> Faces { get; set; }   
     }
 }
