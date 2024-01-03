@@ -20,7 +20,7 @@ namespace biometricService.Services
             _context = context;
             _httpService = httpService;
             _logService = logService;
-        }       
+        }
 
         public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
         {
@@ -74,10 +74,10 @@ namespace biometricService.Services
 
         public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user)
         {
-            var defaultUser = "Thulani";
+            var defaultUser = "SysAdmin";
 
             var query = await _context.Users
-                .FirstOrDefaultAsync(x => x.ComputerSID == user.ComputerMotherSerialNumber && !x.Deleted);
+                .FirstOrDefaultAsync(x => x.ComputerMotherboardSerialNumber == user.ComputerMotherSerialNumber && !x.Deleted);
 
             if (query != null)
             {
@@ -91,7 +91,6 @@ namespace biometricService.Services
                 };
             }
 
-
             var userEntity = new User
             {
                 FirstName = user.FirstName,
@@ -104,12 +103,10 @@ namespace biometricService.Services
                 TransactionDate = DateTime.Now,
                 Deleted = false,
             };
-               
-        
 
             _context.Users.Add(userEntity);
             await _context.SaveChangesAsync();
-          
+
             _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
 
             return new RegisterUserResponse { UserId = userEntity.Id, Message = "Succefully register the user" };
@@ -118,8 +115,7 @@ namespace biometricService.Services
         public async Task<VerificationResponse> VerifyUser(VerificationRequest request)
         {
             var query = await _context.Users
-                 .Where(x => x.ComputerSID == request.ComputerSid &&
-                 x.WindowsProfileId == request.WindowsProfileId && !x.Deleted)
+                 .Where(x => x.ComputerMotherboardSerialNumber == request.ComputerMotherboardSerialNumber && !x.Deleted)
                  .FirstOrDefaultAsync();
 
             var response = new VerificationResponse();

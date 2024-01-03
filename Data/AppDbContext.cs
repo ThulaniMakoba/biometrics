@@ -13,7 +13,7 @@ namespace biometricService.Data
             .ValueGeneratedOnAdd();
 
             modelBuilder.Entity<User>()
-                .HasMany(a => a.Faces)
+                .HasMany(a => a.FaceData)
                 .WithOne(b => b.User)
                 .HasForeignKey(b => b.UserId);         
 
