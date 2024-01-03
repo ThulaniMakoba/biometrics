@@ -20,68 +20,7 @@ namespace biometricService.Services
             _context = context;
             _httpService = httpService;
             _logService = logService;
-        }
-
-        //public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
-        //{
-        //    try
-        //    {
-        //        var response = await _httpService.PostAsync<CreateCustomerResponse>("/identity/api/v1/customers");
-        //        return response ?? new CreateCustomerResponse();
-        //    }
-        //    catch (Exception)
-        //    {
-        //        throw;
-        //    }
-
-        //}        //public async Task<CreateLivenessResponse> CreateLiveness(Guid customerId)
-        //{
-        //    try
-        //    {
-        //        var response = await _httpService.PutAsync<CreateLivenessResponse>($"/identity/api/v1/customers/{customerId}/liveness");
-        //        return response ?? new CreateLivenessResponse();
-        //    }
-        //    catch (Exception)
-        //    {
-        //        throw;
-        //    }
-
-        //}
-
-
-        //public async Task CreateLivenessSelfie(Guid customerId, CreateLivenessSelfieRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _httpService.PostAsync<CreateLivenessSelfieRequest, ErrorMessageModel>($"/identity/api/v1/customers/{customerId}/liveness/selfies", request);
-        //        if (response.ErrorCode != null)
-        //            throw new Exception(response.ErrorCode);
-        //    }
-        //    catch (Exception)
-        //    {
-        //        throw;
-        //    }
-        //}
-
-        //public async Task<ScoreResponse> EvaluateLivenesSelfie(Guid customerId)
-        //{
-        //    try
-        //    {
-        //        var referenceFaceRequest = new PassiveLivenessTypeRequest { type = "PASSIVE_LIVENESS" };
-        //        var response = await _httpService.PostAsync<PassiveLivenessTypeRequest, ScoreResponse>($"/identity/api/v1/customers/{customerId}/liveness/evaluation", referenceFaceRequest);
-
-        //        var convertedScored = double.Parse(response.Score, CultureInfo.InvariantCulture);
-        //        if (convertedScored < 0.89)
-        //            _logService.Log($"Customer Id:{customerId} failed liveness");
-
-        //        return response ?? new ScoreResponse();
-        //    }
-        //    catch (Exception)
-        //    {
-
-        //        throw;
-        //    }
-        //}
+        }       
 
         public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
         {
@@ -138,7 +77,7 @@ namespace biometricService.Services
             var defaultUser = "Thulani";
 
             var query = await _context.Users
-                .FirstOrDefaultAsync(x => x.ComputerSID == user.ComputerSID && !x.Deleted);
+                .FirstOrDefaultAsync(x => x.ComputerSID == user.ComputerMotherSerialNumber && !x.Deleted);
 
             if (query != null)
             {
@@ -152,37 +91,28 @@ namespace biometricService.Services
                 };
             }
 
-            var faceEntity = new FaceData
+
+            var userEntity = new User
             {
-                User = new User
-                {
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    UserName = user.UserName,
-                    InnovatricsFaceId = user.InnovatricsFaceId,
-                    WindowsProfileId = user.WindowsProfileId,
-                    ComputerSID = user.ComputerSID,
-                    CreatedDate = DateTime.Now,
-                    CreatedBy = defaultUser,
-                    TransactionBy = defaultUser,
-                    TransactionDate = DateTime.Now,
-                    Deleted = false,
-                },
-                FaceBase64 = user.Base64Image,
-                FaceReferenceId = user.InnovatricsFaceId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                UserName = user.UserName,
                 CreatedDate = DateTime.Now,
                 CreatedBy = defaultUser,
                 TransactionBy = defaultUser,
                 TransactionDate = DateTime.Now,
+                Deleted = false,
             };
+               
+        
 
-            _context.FaceData.Add(faceEntity);
+            _context.Users.Add(userEntity);
             await _context.SaveChangesAsync();
           
-            _logService.Log($"\"Succefully register the user with id\": {faceEntity.User.Id}");
+            _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
 
-            return new RegisterUserResponse { UserId = faceEntity.User.Id, Message = "Succefully register the user" };
+            return new RegisterUserResponse { UserId = userEntity.Id, Message = "Succefully register the user" };
         }
 
         public async Task<VerificationResponse> VerifyUser(VerificationRequest request)

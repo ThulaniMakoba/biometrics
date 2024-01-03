@@ -1,11 +1,47 @@
-﻿using biometricService.Interfaces;
+﻿using Azure;
+using biometricService.Interfaces;
 using biometricService.Models.Responses;
+using Microsoft.IdentityModel.Tokens;
 using System.DirectoryServices.AccountManagement;
+using System.Management;
 
 namespace biometricService.Services
 {
     public class ConfigService : IConfigService
     {
+        public ComputerConfigResponse GetComputerMotherboardSerialNumber()
+        {
+            string serialNumber = string.Empty;
+            var response = new ComputerConfigResponse();
+            try
+            {
+                ManagementObjectSearcher mbs = new ManagementObjectSearcher("Select * from Win32_BaseBoard");
+                foreach (ManagementObject mo in mbs.Get())
+                {
+                    serialNumber = mo["SerialNumber"].ToString().Trim();
+                }
+
+                if (serialNumber.IsNullOrEmpty())
+                {
+                    response.ErrorMessage = "Computer Motherboard number not found";
+                    response.Success = false;
+                    return response;
+                }
+
+                response.ComputerMotherboardSerialNumber = serialNumber;
+                response.Success = true;
+
+                return response;
+            }
+            catch (Exception e)
+            {
+
+                response.ErrorMessage = e.Message.ToString();
+                response.Success = false;
+                return response;
+            }
+        }
+
         public ComputerConfigResponse GetComputerSid()
         {
             string computerName = Environment.MachineName;

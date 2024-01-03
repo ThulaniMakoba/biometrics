@@ -1,7 +1,7 @@
 ﻿using biometricService.Interfaces;
 using biometricService.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
-using System.DirectoryServices.AccountManagement;
+using System.Management;
 
 namespace biometricService.Controllers
 {
@@ -14,8 +14,14 @@ namespace biometricService.Controllers
 
         [HttpGet("computer-sid")]
         public ActionResult<ComputerConfigResponse> GetComputerSid()
-        {
+        {          
             return _configService.GetComputerSid();
+        }
+
+        [HttpGet("computer-motherboard")]
+        public ActionResult<ComputerConfigResponse> GetComputerMotherboardId()
+        {
+            return _configService.GetComputerMotherboardSerialNumber();
         }
     }
 }
