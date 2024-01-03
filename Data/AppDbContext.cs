@@ -24,9 +24,14 @@ namespace biometricService.Data
             modelBuilder.Entity<LogTransaction>()
                 .Property(l => l.Id)
                 .ValueGeneratedOnAdd();
+
+            modelBuilder.Entity<ConfigSetting>()
+                .Property(c => c.Id)
+                .ValueGeneratedOnAdd();
         }
         public DbSet<User> Users { get; set; }
         public DbSet<FaceData> FaceData { get; set; }
         public DbSet<LogTransaction> LogTransaction { get; set; }
+        public DbSet<ConfigSetting> ConfigSettings { get; set; }
     }
 }

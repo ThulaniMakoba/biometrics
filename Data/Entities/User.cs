@@ -12,11 +12,11 @@ namespace biometricService.Data.Entities
         public string FirstName { get; set; }
         [Required]
         public string UserName { get; set; }
-
+        [Required]
+        public string IdNumber { get; set; }
         [Required]
         [EmailAddress]
         public string Email { get; set; }
-        [Required]
         public Guid? InnovatricsFaceId { get; set; }
         public string? ComputerMotherboardSerialNumber { get; set; }
         public string? MobileIMEI { get; set; }

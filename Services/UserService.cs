@@ -77,7 +77,7 @@ namespace biometricService.Services
             var defaultUser = "SysAdmin";
 
             var query = await _context.Users
-                .FirstOrDefaultAsync(x => x.ComputerMotherboardSerialNumber == user.ComputerMotherSerialNumber && !x.Deleted);
+                .FirstOrDefaultAsync(x => x.IdNumber == user.IdNumber && !x.Deleted);
 
             if (query != null)
             {
@@ -93,6 +93,7 @@ namespace biometricService.Services
 
             var userEntity = new User
             {
+                IdNumber = user.IdNumber,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,

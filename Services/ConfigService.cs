@@ -1,45 +1,73 @@
 ﻿using Azure;
+using biometricService.Data;
+using biometricService.Data.Entities;
 using biometricService.Interfaces;
+using biometricService.Models;
 using biometricService.Models.Responses;
 using Microsoft.IdentityModel.Tokens;
 using System.DirectoryServices.AccountManagement;
 using System.Management;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace biometricService.Services
 {
     public class ConfigService : IConfigService
     {
-        public ComputerConfigResponse GetComputerMotherboardSerialNumber()
+        private readonly AppDbContext _context;
+        public ConfigService(AppDbContext context)
         {
-            string serialNumber = string.Empty;
+            _context = context;
+        }
+        public ComputerConfigResponse StoreComputerConfig(ComputerConfigRequest request)
+        {
+            var query = _context.ConfigSettings
+                .FirstOrDefault(x => x.IdNumber == request.IdNumber);
+
             var response = new ComputerConfigResponse();
-            try
+
+            if (query != null)
             {
-                ManagementObjectSearcher mbs = new ManagementObjectSearcher("Select * from Win32_BaseBoard");
-                foreach (ManagementObject mo in mbs.Get())
-                {
-                    serialNumber = mo["SerialNumber"].ToString().Trim();
-                }
-
-                if (serialNumber.IsNullOrEmpty())
-                {
-                    response.ErrorMessage = "Computer Motherboard number not found";
-                    response.Success = false;
-                    return response;
-                }
-
-                response.ComputerMotherboardSerialNumber = serialNumber;
-                response.Success = true;
-
-                return response;
-            }
-            catch (Exception e)
-            {
-
-                response.ErrorMessage = e.Message.ToString();
+                response.ErrorMessage = $"The user with this ID number {query.IdNumber}, has assigned computer";
                 response.Success = false;
+                response.ComputerMotherboardSerialNumber = query.ComputerUniqueNumber;
+
                 return response;
             }
+
+            var configSetting = new ConfigSetting
+            {
+                ComputerUniqueNumber = request.ComputerSerialNumber,
+                IdNumber = request.IdNumber,
+                ComputerName = request.ComputerName,
+            };
+
+            _context.Add(configSetting);
+            _context.SaveChanges();
+
+            return response;
+        }
+        public ComputerConfigResponse GetComputerMotherboardSerialNumber(string idNumber)
+        {
+            var response = new ComputerConfigResponse();
+
+            if (string.IsNullOrWhiteSpace(idNumber))
+            {
+                response.ErrorMessage = "Missing ID number";
+                response.Success = false;
+
+                return response;
+            }
+
+            var configSetting = _context.ConfigSettings
+                .FirstOrDefault(c => c.IdNumber == idNumber);
+
+            response.Success = configSetting == null ? false : true;
+            response.ErrorMessage = configSetting == null ?
+                $"The user with this ID number {idNumber}, is not assigned to a computer" : string.Empty;
+
+            response.ComputerMotherboardSerialNumber = configSetting != null ? configSetting.ComputerUniqueNumber : string.Empty;
+
+            return response;
         }
 
         public ComputerConfigResponse GetComputerSid()
