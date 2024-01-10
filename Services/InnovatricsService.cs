@@ -1,6 +1,4 @@
-﻿using Azure.Core;
-using biometricService.Http;
-using biometricService.Interfaces;
+﻿using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using System.Globalization;
@@ -71,15 +69,6 @@ namespace biometricService.Services
                 if (response.ErrorCode != null)
                     throw new Exception(response.ErrorCode);
 
-                var updateUserRequest = new UpdateUserFaceDataRequest
-                {
-                    UserId = request.UserId,
-                    FaceImageBase64 = request.image.data,
-                    FaceReferenceId = response.id,
-                    ComputerSerialNumber = request.ComputerSerialNumber,
-                };
-
-                await _userService.UpdateUserWithReferenceFace(updateUserRequest);
                 return response;
             }
             catch (Exception e)
@@ -87,20 +76,11 @@ namespace biometricService.Services
                 return new CreateReferenceFaceResponse { ErrorMessage = e.Message };
             }
         }
-
         public async Task<CropFaceWithoutBackgroungResult> CreateReferenceFaceWithOutBackGround(CreateReferenceFaceRequest request)
         {
             try
             {
-                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
-                {
-                    image = request.image,
-                    detection = request.detection
-                });
-
-                if (response.ErrorCode != null)
-                    throw new Exception(response.ErrorCode);
-
+                var response = await CreateReferenceFace(request);
                 return await FaceCropWithoutBackground(response.id, request);
             }
             catch (Exception)
@@ -119,6 +99,16 @@ namespace biometricService.Services
             referenceFaceRequest.image.data = response.data;
 
             var createReferenceFace = await CreateReferenceFace(referenceFaceRequest);
+
+            var updateUserWithReferenceFace = new UpdateUserFaceDataRequest
+            {
+                FaceImageBase64 = response.data,
+                FaceReferenceId = createReferenceFace.id,
+                UserId = referenceFaceRequest.UserId,
+                ComputerSerialNumber = referenceFaceRequest.ComputerSerialNumber
+            };
+
+            await _userService.UpdateUserWithReferenceFace(updateUserWithReferenceFace);
 
             return new CropFaceWithoutBackgroungResult
             {

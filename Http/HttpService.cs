@@ -1,4 +1,5 @@
 ﻿using biometricService.Interfaces;
+using System.Net;
 using System.Net.Http.Formatting;
 
 namespace biometricService.Http
@@ -26,7 +27,7 @@ namespace biometricService.Http
 
             AddAuthorizationHeader(request);
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
+            HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
             return await HandleResponse<TResult>(response);
 
@@ -92,6 +93,11 @@ namespace biometricService.Http
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsAsync<T>();
+            }
+            else if(response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                var details = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Error: {response.StatusCode} - Details {details}");
             }
             else
             {
