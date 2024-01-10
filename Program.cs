@@ -11,6 +11,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IInnovatricsService, InnovatricsService>();
+builder.Services.AddHttpClient<ConfigService>();
 
 builder.Services.AddTransient<IHttpService>(provider =>
 {

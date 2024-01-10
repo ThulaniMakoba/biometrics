@@ -24,7 +24,7 @@ namespace biometricService.Http
                 Content = new ObjectContent<TRequest>(data, new JsonMediaTypeFormatter())
             };
 
-            await AddAuthorizationHeader(request);
+            AddAuthorizationHeader(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
@@ -39,7 +39,20 @@ namespace biometricService.Http
                 Content = new ObjectContent<object>(null, new JsonMediaTypeFormatter())
             };
 
-            await AddAuthorizationHeader(request);
+            AddAuthorizationHeader(request);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+            return await HandleResponse<T>(response);
+        }
+        public async Task<T> GetAsync<T>(string endpoint)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, endpoint)
+            {
+                Content = new ObjectContent<object>(null, new JsonMediaTypeFormatter())
+            };
+
+            AddAuthorizationHeader(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
@@ -53,7 +66,7 @@ namespace biometricService.Http
                 Content = new ObjectContent<object>(null, new JsonMediaTypeFormatter())
             };
 
-            await AddAuthorizationHeader(request);
+            AddAuthorizationHeader(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
@@ -67,7 +80,7 @@ namespace biometricService.Http
                 Content = new ObjectContent<TRequest>(data, new JsonMediaTypeFormatter())
             };
 
-            await AddAuthorizationHeader(request);
+            AddAuthorizationHeader(request);
 
             HttpResponseMessage response = await _httpClient.SendAsync(request);
 
@@ -86,26 +99,14 @@ namespace biometricService.Http
             }
         }
 
-        public async Task<T> GetAsync<T>()
+        private void AddAuthorizationHeader(HttpRequestMessage request)
         {
-            throw new NotImplementedException();
-        }
-
-
-
-        private async Task AddAuthorizationHeader(HttpRequestMessage request)
-        {
-            string token = await _tokenService.GetToken();
+            string token = _tokenService.GetToken();
 
             if (!string.IsNullOrEmpty(token))
             {
                 _tokenService.AddBearerToken(request, token);
             }
         }
-
-
-
     }
-
-
 }

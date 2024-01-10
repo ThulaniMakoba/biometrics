@@ -8,5 +8,6 @@ namespace biometricService.Interfaces
         ComputerConfigResponse GetComputerSid();
         ComputerConfigResponse GetComputerMotherboardSerialNumber(string idNumber);
         ComputerConfigResponse StoreComputerConfig(ComputerConfigRequest request);
+        Task<RegisterServiceResponse> RegisterUserComputerDetails(string userId);
     }
 }

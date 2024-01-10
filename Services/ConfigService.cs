@@ -1,22 +1,26 @@
-﻿using Azure;
+﻿using Azure.Core;
 using biometricService.Data;
 using biometricService.Data.Entities;
+using biometricService.Http;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
-using Microsoft.IdentityModel.Tokens;
 using System.DirectoryServices.AccountManagement;
-using System.Management;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Net.Http.Formatting;
+using System.Net.Http;
 
 namespace biometricService.Services
 {
     public class ConfigService : IConfigService
     {
         private readonly AppDbContext _context;
-        public ConfigService(AppDbContext context)
+
+        private readonly HttpClient _httpClient = new HttpClient();
+        public ConfigService(AppDbContext context, IHttpClientFactory httpClientFactory)
         {
             _context = context;
+            _httpClient = httpClientFactory.CreateClient();
         }
         public ComputerConfigResponse StoreComputerConfig(ComputerConfigRequest request)
         {
@@ -102,6 +106,23 @@ namespace biometricService.Services
                 response.Success = false;
                 return response;
             }
+        }
+
+        public async Task<RegisterServiceResponse> RegisterUserComputerDetails(string userId)
+        {
+            string apiEndpoint = $"http://localhost:5000/api/machineDetails/register-service/{userId}";
+
+            HttpResponseMessage response = await _httpClient.PostAsync(apiEndpoint, null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<RegisterServiceResponse>();
+            }
+            else
+            {
+                throw new HttpRequestException($"Error: {response.StatusCode} - {response.ReasonPhrase}");
+            }
+
         }
     }
 }

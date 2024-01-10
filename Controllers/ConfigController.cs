@@ -15,7 +15,7 @@ namespace biometricService.Controllers
 
         [HttpGet("computer-sid")]
         public ActionResult<ComputerConfigResponse> GetComputerSid()
-        {          
+        {
             return _configService.GetComputerSid();
         }
 
@@ -29,6 +29,13 @@ namespace biometricService.Controllers
         public void PostComputerConfig(ComputerConfigRequest request)
         {
             _configService.StoreComputerConfig(request);
+        }
+
+        [HttpPost("register-user-computer/{userId}")]
+        public async Task<IActionResult> RegisterUserComputer(string userId)
+        {
+            var response = await _configService.RegisterUserComputerDetails(userId);
+            return Ok(response);
         }
     }
 }

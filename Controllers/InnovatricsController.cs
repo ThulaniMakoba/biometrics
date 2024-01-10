@@ -69,7 +69,7 @@ namespace biometricService.Controllers
             return Ok(response);
         }
 
-        [HttpPost("innovatrics-create-reference-face")]
+        [HttpPost("create-reference-face")]
         public async Task<IActionResult> CreateReferenceFace(CreateReferenceFaceRequest request)
         {
             if (request == null)
@@ -89,6 +89,24 @@ namespace biometricService.Controllers
             }
         }
 
+        [HttpPost("create-reference-face-with-out-background")]
+        public async Task<IActionResult> CreateReferenceFaceWithOutBackground(CreateReferenceFaceRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request is empty");
+            }
 
+            var response = await _innovatricsService.CreateReferenceFaceWithOutBackGround(request);
+
+            if (response != null)
+            {
+                return Ok(response);
+            }
+            else
+            {
+                return BadRequest("Error calling Innovatrics API");
+            }
+        }
     }
 }

@@ -8,10 +8,8 @@ namespace biometricService.Http
 
 
         //HardCode the token for now
-        public async Task<string> GetToken()
-        {
-            return "RElTX3RyaWFsXzYwNzpVdFl3dTJkTlNyMVJKaFRMSVVMZFM0a2doT2gwZzZ5Vg==";
-        }
+        public string GetToken() => "RElTX2V2YWxfMzQ6SGd3dThnQ2NMdlMyWlVza05lOFlDQVFyNzlpV1dOZ1U=";
+
 
         public HttpRequestMessage AddBearerToken(HttpRequestMessage request, string token)
         {

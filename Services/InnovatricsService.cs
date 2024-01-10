@@ -1,4 +1,5 @@
-﻿using biometricService.Http;
+﻿using Azure.Core;
+using biometricService.Http;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
@@ -10,10 +11,12 @@ namespace biometricService.Services
     {
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
-        public InnovatricsService(IHttpService httpService, ILogService logService)
+        private readonly IUserService _userService;
+        public InnovatricsService(IHttpService httpService, ILogService logService, IUserService userService)
         {
             _httpService = httpService;
             _logService = logService;
+            _userService = userService;
         }
         public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
         {
@@ -60,12 +63,57 @@ namespace biometricService.Services
             try
             {
                 var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
+                if (response.ErrorCode != null)
+                    throw new Exception(response.ErrorCode);
+
+                var updateUserRequest = new UpdateUserFaceDataRequest
+                {
+                    UserId = request.UserId,
+                    FaceImageBase64 = request.image.data,
+                    FaceReferenceId = response.id,
+                };
+
+                await _userService.UpdateUserWithReferenceFace(updateUserRequest);
                 return response;
             }
             catch (Exception e)
             {
                 return new CreateReferenceFaceResponse { ErrorMessage = e.Message };
             }
+        }
+
+        public async Task<CropFaceWithoutBackgroungResult> CreateReferenceFaceWithOutBackGround(CreateReferenceFaceRequest request)
+        {
+            try
+            {
+                var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
+                if (response.ErrorCode != null)
+                    throw new Exception(response.ErrorCode);
+
+                return await FaceCropWithoutBackground(response.id, request);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        private async Task<CropFaceWithoutBackgroungResult> FaceCropWithoutBackground(Guid faceId, CreateReferenceFaceRequest referenceFaceRequest)
+        {
+            var response = await _httpService.GetAsync<CropFaceRemoveBackgroundResponse>($"/identity/api/v1/faces/{faceId}/crop/removed-background");
+            if (response.ErrorCode != null)
+                throw new Exception(response.ErrorCode);
+
+            referenceFaceRequest.image.data = response.data;
+
+            var createReferenceFace = await CreateReferenceFace(referenceFaceRequest);
+
+            return new CropFaceWithoutBackgroungResult
+            {
+                Base64Image = referenceFaceRequest.image.data,
+                Id = createReferenceFace.id
+            };
         }
 
         public async Task<ScoreResponse> EvaluateLivenesSelfie(Guid customerId)

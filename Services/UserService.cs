@@ -1,11 +1,9 @@
-﻿using Azure.Core;
-using biometricService.Data;
+﻿using biometricService.Data;
 using biometricService.Data.Entities;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization;
 
 namespace biometricService.Services
 {
@@ -15,6 +13,8 @@ namespace biometricService.Services
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
 
+        const string defaultUser = "SysAdmin";
+
         public UserService(AppDbContext context, IHttpService httpService, ILogService logService)
         {
             _context = context;
@@ -22,18 +22,18 @@ namespace biometricService.Services
             _logService = logService;
         }
 
-        public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
-        {
-            try
-            {
-                var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
-                return response;
-            }
-            catch (Exception e)
-            {
-                return new CreateReferenceFaceResponse { ErrorMessage = e.Message };
-            }
-        }
+        //public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
+        //{
+        //    try
+        //    {
+        //        var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
+        //        return response;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return new CreateReferenceFaceResponse { ErrorMessage = e.Message };
+        //    }
+        //}
 
         public async Task<ScoreResponse> ProbeReferenceFace(ProbeFaceRequest request)
         {
@@ -69,13 +69,10 @@ namespace biometricService.Services
                 return new ScoreResponse { ErrorMessage = e.Message };
 
             }
-
         }
 
         public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user)
         {
-            var defaultUser = "SysAdmin";
-
             var query = await _context.Users
                 .FirstOrDefaultAsync(x => x.IdNumber == user.IdNumber && !x.Deleted);
 
@@ -98,6 +95,7 @@ namespace biometricService.Services
                 LastName = user.LastName,
                 Email = user.Email,
                 UserName = user.UserName,
+                ComputerMotherboardSerialNumber = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.Now,
                 CreatedBy = defaultUser,
                 TransactionBy = defaultUser,
@@ -111,6 +109,39 @@ namespace biometricService.Services
             _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
 
             return new RegisterUserResponse { UserId = userEntity.Id, Message = "Succefully register the user" };
+        }
+
+        public async Task UpdateUserWithReferenceFace(UpdateUserFaceDataRequest request)
+        {
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request));
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == request.UserId);
+
+            if (user == null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            user.UpdatedDate = DateTime.Now;
+            user.InnovatricsFaceId = request.FaceReferenceId;
+            user.UpdatedBy = defaultUser;
+
+            var faceData = new FaceData()
+            {
+                UserId = user.Id,
+                FaceReferenceId = request.FaceReferenceId,
+                FaceBase64 = request.FaceImageBase64,
+                CreatedDate = DateTime.Now,
+                CreatedBy = defaultUser,
+                TransactionBy = defaultUser,
+                TransactionDate = DateTime.Now,
+            };
+
+            _context.FaceData.Add(faceData);
+            await _context.SaveChangesAsync();
         }
 
         public async Task<VerificationResponse> VerifyUser(VerificationRequest request)
