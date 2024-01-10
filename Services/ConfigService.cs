@@ -9,6 +9,8 @@ using System.DirectoryServices.AccountManagement;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Net.Http.Formatting;
 using System.Net.Http;
+using System.Management;
+using Microsoft.IdentityModel.Tokens;
 
 namespace biometricService.Services
 {
@@ -50,28 +52,37 @@ namespace biometricService.Services
 
             return response;
         }
-        public ComputerConfigResponse GetComputerMotherboardSerialNumber(string idNumber)
+        public ComputerConfigResponse GetComputerMotherboardSerialNumber()
         {
+            string serialNumber = string.Empty;
             var response = new ComputerConfigResponse();
-
-            if (string.IsNullOrWhiteSpace(idNumber))
+            try
             {
-                response.ErrorMessage = "Missing ID number";
-                response.Success = false;
+                ManagementObjectSearcher mbs = new ManagementObjectSearcher("Select * from Win32_BaseBoard");
+                foreach (ManagementObject mo in mbs.Get())
+                {
+                    serialNumber = mo["SerialNumber"].ToString().Trim();
+                }
+
+                if (serialNumber.IsNullOrEmpty())
+                {
+                    response.ErrorMessage = "Computer Motherboard number not found";
+                    response.Success = false;
+                    return response;
+                }
+
+                response.ComputerMotherboardSerialNumber = serialNumber;
+                response.Success = true;
 
                 return response;
             }
+            catch (Exception e)
+            {
 
-            var configSetting = _context.ConfigSettings
-                .FirstOrDefault(c => c.IdNumber == idNumber);
-
-            response.Success = configSetting == null ? false : true;
-            response.ErrorMessage = configSetting == null ?
-                $"The user with this ID number {idNumber}, is not assigned to a computer" : string.Empty;
-
-            response.ComputerMotherboardSerialNumber = configSetting != null ? configSetting.ComputerUniqueNumber : string.Empty;
-
-            return response;
+                response.ErrorMessage = e.Message.ToString();
+                response.Success = false;
+                return response;
+            }
         }
 
         public ComputerConfigResponse GetComputerSid()

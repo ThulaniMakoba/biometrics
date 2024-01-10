@@ -19,10 +19,10 @@ namespace biometricService.Controllers
             return _configService.GetComputerSid();
         }
 
-        [HttpGet("computer-motherboard/{idNumber}")]
-        public ActionResult<ComputerConfigResponse> GetComputerMotherboardId(string idNumber)
+        [HttpGet("computer-motherboard")]
+        public ActionResult<ComputerConfigResponse> GetComputerMotherboardId()
         {
-            return _configService.GetComputerMotherboardSerialNumber(idNumber);
+            return _configService.GetComputerMotherboardSerialNumber();
         }
 
         [HttpPost("store-computer-serial-number")]

@@ -6,7 +6,7 @@ namespace biometricService.Interfaces
     public interface IConfigService
     {
         ComputerConfigResponse GetComputerSid();
-        ComputerConfigResponse GetComputerMotherboardSerialNumber(string idNumber);
+        ComputerConfigResponse GetComputerMotherboardSerialNumber();
         ComputerConfigResponse StoreComputerConfig(ComputerConfigRequest request);
         Task<RegisterServiceResponse> RegisterUserComputerDetails(string userId);
     }
