@@ -22,25 +22,15 @@ namespace biometricService.Services
             _logService = logService;
         }
 
-        //public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
-        //{
-        //    try
-        //    {
-        //        var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
-        //        return response;
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        return new CreateReferenceFaceResponse { ErrorMessage = e.Message };
-        //    }
-        //}
-
         public async Task<ScoreResponse> ProbeReferenceFace(ProbeFaceRequest request)
         {
             try
             {
-                var referenceFaceRequest = new CreateReferenceFaceRequest { detection = request.detection, image = request.image };
-                var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", referenceFaceRequest);
+                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
+                {
+                    image = request.image,
+                    detection = request.detection,
+                });
 
                 var result = await ProbeFaceToReferenceFace(response.id, request.ReferenceFaceId);
 
@@ -127,6 +117,7 @@ namespace biometricService.Services
 
             user.UpdatedDate = DateTime.Now;
             user.InnovatricsFaceId = request.FaceReferenceId;
+            user.ComputerMotherboardSerialNumber = request.ComputerSerialNumber;
             user.UpdatedBy = defaultUser;
 
             var faceData = new FaceData()
@@ -162,6 +153,5 @@ namespace biometricService.Services
             response.ReferenceFaceId = query.InnovatricsFaceId;
             return response;
         }
-
     }
 }

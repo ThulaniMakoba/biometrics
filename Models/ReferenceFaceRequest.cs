@@ -1,10 +1,8 @@
 ﻿namespace biometricService.Models
 {
-    public class CreateReferenceFaceRequest
+    public class ReferenceFaceRequest
     {
-        public int UserId { get; set; }
         public Image image { get; set; }
         public Detection detection { get; set; }
-        public string? ComputerSerialNumber { get; set; }
     }
 }

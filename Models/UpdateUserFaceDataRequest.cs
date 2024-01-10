@@ -5,5 +5,6 @@
         public int UserId { get; set; }
         public Guid FaceReferenceId { get; set; }
         public string FaceImageBase64 { get; set; }
+        public string ComputerSerialNumber { get; set; }
     }
 }

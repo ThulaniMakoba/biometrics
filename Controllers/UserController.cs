@@ -17,26 +17,6 @@ namespace biometricService.Controllers
             _userService = userService;
         }
 
-        //[HttpPost("innovatrics-create-reference-face")]
-        //public async Task<IActionResult> CreateReferenceFace(CreateReferenceFaceRequest request)
-        //{
-        //    if (request == null)
-        //    {
-        //        return BadRequest("Request is empty");
-        //    }
-
-        //    var response = await _userService.CreateReferenceFace(request);
-
-        //    if (response != null)
-        //    {
-        //        return Ok(response);
-        //    }
-        //    else
-        //    {
-        //        return BadRequest("Error calling Innovatrics API");
-        //    }
-        //}
-
         [HttpPost("register")]
         public async Task<IActionResult> RegisterUser([FromBody] UserRegisterRequest user)
         {
@@ -50,10 +30,10 @@ namespace biometricService.Controllers
             return Ok(result);
         }
 
-        [HttpPost("innovatrics-probe-face")]
+        [HttpPost("probe-face")]
         public async Task<IActionResult> ProbeFace(ProbeFaceRequest request)
         {
-            if (request == null)//GET WindowsSID
+            if (request == null)
             {
                 return BadRequest("Request is empty");
             }

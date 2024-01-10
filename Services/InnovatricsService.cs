@@ -62,7 +62,12 @@ namespace biometricService.Services
         {
             try
             {
-                var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
+                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
+                {
+                    image = request.image,
+                    detection = request.detection
+                });
+
                 if (response.ErrorCode != null)
                     throw new Exception(response.ErrorCode);
 
@@ -71,6 +76,7 @@ namespace biometricService.Services
                     UserId = request.UserId,
                     FaceImageBase64 = request.image.data,
                     FaceReferenceId = response.id,
+                    ComputerSerialNumber = request.ComputerSerialNumber,
                 };
 
                 await _userService.UpdateUserWithReferenceFace(updateUserRequest);
@@ -86,7 +92,12 @@ namespace biometricService.Services
         {
             try
             {
-                var response = await _httpService.PostAsync<CreateReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", request);
+                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
+                {
+                    image = request.image,
+                    detection = request.detection
+                });
+
                 if (response.ErrorCode != null)
                     throw new Exception(response.ErrorCode);
 
