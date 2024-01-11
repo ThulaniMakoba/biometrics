@@ -7,15 +7,13 @@ namespace biometricService.Http
     public class HttpService : IHttpService
     {
         private readonly HttpClient _httpClient;
+
         private readonly ITokenService _tokenService;
 
-        public HttpService(string baseUrl, ITokenService tokenService)
+        public HttpService(HttpClient httpClient, ITokenService tokenService)
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(baseUrl)
-            };
-            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
+            _tokenService = tokenService;
+            _httpClient = httpClient;
         }
 
         public async Task<TResult> PostAsync<TRequest, TResult>(string endpoint, TRequest data)
@@ -94,10 +92,9 @@ namespace biometricService.Http
             {
                 return await response.Content.ReadAsAsync<T>();
             }
-            else if(response.StatusCode == HttpStatusCode.BadRequest)
+            else if (response.StatusCode == HttpStatusCode.BadRequest)
             {
-                var details = await response.Content.ReadAsStringAsync();
-                throw new HttpRequestException($"Error: {response.StatusCode} - Details {details}");
+                throw new HttpRequestException($"Error: {response.StatusCode} - Details {response.ReasonPhrase}");
             }
             else
             {

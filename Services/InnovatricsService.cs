@@ -67,7 +67,7 @@ namespace biometricService.Services
                 });
 
                 if (response.ErrorCode != null)
-                    throw new Exception(response.ErrorCode);
+                    return new CreateReferenceFaceResponse { ErrorCode = response.ErrorCode, ErrorMessage = response.ErrorMessage };
 
                 return response;
             }
@@ -92,13 +92,29 @@ namespace biometricService.Services
 
         private async Task<CropFaceWithoutBackgroungResult> FaceCropWithoutBackground(Guid faceId, CreateReferenceFaceRequest referenceFaceRequest)
         {
+            if (faceId == Guid.Empty)
+                return new CropFaceWithoutBackgroungResult
+                {
+                    ErrorMessage = "Failed creating crop face"
+
+                };
+
+
             var response = await _httpService.GetAsync<CropFaceRemoveBackgroundResponse>($"/identity/api/v1/faces/{faceId}/crop/removed-background");
             if (response.ErrorCode != null)
                 throw new Exception(response.ErrorCode);
 
             referenceFaceRequest.image.data = response.data;
 
+            Thread.Sleep(5000);
             var createReferenceFace = await CreateReferenceFace(referenceFaceRequest);
+
+            if (createReferenceFace.ErrorCode != null || createReferenceFace.ErrorMessage != null)
+                return new CropFaceWithoutBackgroungResult
+                {
+                    ErrorMessage = createReferenceFace.ErrorMessage,
+                    ErrorCode = createReferenceFace.ErrorCode
+                };
 
             var updateUserWithReferenceFace = new UpdateUserFaceDataRequest
             {

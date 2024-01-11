@@ -11,14 +11,15 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IInnovatricsService, InnovatricsService>();
-builder.Services.AddHttpClient<ConfigService>();
 
-builder.Services.AddTransient<IHttpService>(provider =>
+builder.Services.AddScoped<IHttpService, HttpService>();
+
+builder.Services.AddHttpClient<IHttpService, HttpService>(client =>
 {
-    var tokenService = provider.GetRequiredService<ITokenService>();
-    return new HttpService("https://dot.innovatrics.com", tokenService);
+    client.BaseAddress = new Uri("https://dot.innovatrics.com");
 });
-builder.Services.AddTransient<ITokenService, TokenService>();
+
+builder.Services.AddScoped<ITokenService, TokenService>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -45,11 +46,11 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();

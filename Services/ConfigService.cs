@@ -1,16 +1,11 @@
-﻿using Azure.Core;
-using biometricService.Data;
+﻿using biometricService.Data;
 using biometricService.Data.Entities;
-using biometricService.Http;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
-using System.DirectoryServices.AccountManagement;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Net.Http.Formatting;
-using System.Net.Http;
-using System.Management;
 using Microsoft.IdentityModel.Tokens;
+using System.DirectoryServices.AccountManagement;
+using System.Management;
 
 namespace biometricService.Services
 {
