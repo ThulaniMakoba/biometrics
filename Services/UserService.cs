@@ -4,6 +4,7 @@ using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace biometricService.Services
 {
@@ -51,6 +52,12 @@ namespace biometricService.Services
 
                 var response = await _httpService.PostAsync<ReferenceFaceApi, ScoreResponse>($"/identity/api/v1/faces/{probeFaceId}/similarity", request);
                 _logService.Log($"The combination of ProbeFaceId: {probeFaceId} and ReferenceFaceId: {referenceFaceId},has this score result: {response.Score}");
+
+                double score = double.Parse(response.Score, CultureInfo.InvariantCulture);
+                response.IsSuccess = score >= 0.89 ? true : false;
+                response.Score = string.Empty;
+                response.ErrorMessage = score < 0.89 ? "Score is below required threshold" : string.Empty;
+
                 return response;
             }
             catch (Exception e)
