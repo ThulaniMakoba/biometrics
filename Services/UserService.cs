@@ -23,7 +23,7 @@ namespace biometricService.Services
             _logService = logService;
         }
 
-        public async Task<ScoreResponse> ProbeReferenceFace(ProbeFaceRequest request)
+        public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
         {
             try
             {
@@ -33,15 +33,35 @@ namespace biometricService.Services
                     detection = request.detection,
                 });
 
-                var result = await ProbeFaceToReferenceFace(response.id, request.ReferenceFaceId);
+                var probeReferenceFaceResult = await ProbeFaceToReferenceFace(response.id, request.ReferenceFaceId);
+                var userDetails = new UserModel();
 
-                return result;
+                if (probeReferenceFaceResult != null)
+                    return await GetUserByFaceId(request.ReferenceFaceId);
+
+                return userDetails;
             }
             catch (Exception e)
             {
-                return new ScoreResponse { ErrorMessage = e.Message };
+                return new UserModel { ErrorMessage = e.Message };
             }
 
+        }
+
+        private async Task<UserModel> GetUserByFaceId(Guid referenceFaceId)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(x => x.InnovatricsFaceId == referenceFaceId);
+
+            if (user == null)
+                return new UserModel();
+
+            return new UserModel
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+            };
         }
 
         private async Task<ScoreResponse> ProbeFaceToReferenceFace(Guid probeFaceId, Guid referenceFaceId)

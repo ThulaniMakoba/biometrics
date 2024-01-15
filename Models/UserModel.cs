@@ -1,6 +1,8 @@
-﻿namespace biometricService.Models
+﻿using biometricService.Models.Responses;
+
+namespace biometricService.Models
 {
-    public class UserModel
+    public class UserModel : ErrorMessageModel
     {
         public string LastName { get; set; }
         public string FirstName { get; set; }
