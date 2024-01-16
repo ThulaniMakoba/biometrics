@@ -110,8 +110,7 @@ namespace biometricService.Services
                 IdNumber = user.IdNumber,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Email = user.Email,
-                UserName = user.UserName,
+                Email = user.Email,              
                 ComputerMotherboardSerialNumber = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.Now,
                 CreatedBy = defaultUser,
@@ -180,5 +179,5 @@ namespace biometricService.Services
             response.ReferenceFaceId = query.InnovatricsFaceId;
             return response;
         }
-    }
+     }
 }
