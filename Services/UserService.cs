@@ -13,14 +13,16 @@ namespace biometricService.Services
         private readonly AppDbContext _context;
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
+        private readonly IInnovatricsService _innovatricsService;
 
         const string defaultUser = "SysAdmin";
 
-        public UserService(AppDbContext context, IHttpService httpService, ILogService logService)
+        public UserService(AppDbContext context, IHttpService httpService, ILogService logService, IInnovatricsService innovatricsService)
         {
             _context = context;
             _httpService = httpService;
             _logService = logService;
+            _innovatricsService = innovatricsService;
         }
 
         public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
@@ -179,6 +181,67 @@ namespace biometricService.Services
             response.UserExist = true;
             response.ReferenceFaceId = query.InnovatricsFaceId;
             return response;
+        }
+
+        public async Task<RegisterFaceRequestResponse> RegisterFace(RegisterFaceRequest faceRequest)
+        {
+            try
+            {
+                var createLivenessSelfieRequest = new CreateLivenessSelfieRequest
+                {
+                    image = faceRequest.Image,
+                    assertion = faceRequest.Assertion
+                };
+                await _innovatricsService.CreateLivenessSelfie(faceRequest.CustomerId, createLivenessSelfieRequest);
+
+                var evaluate = await _innovatricsService.EvaluateLivenesSelfie(faceRequest.CustomerId);
+                var response = new RegisterFaceRequestResponse();
+
+                if (!evaluate.IsSuccess)
+                {
+                    response.ErrorMessage = evaluate.ErrorMessage;
+                    return response;
+                }
+
+                var createReferenceFaceRequest = new CreateReferenceFaceRequest
+                {
+                    image = faceRequest.Image,
+                    detection = faceRequest.Detection,
+                    UserId = faceRequest.UserId,
+                    ComputerSerialNumber = faceRequest.ComputerSerialNumber,
+                };
+
+                var createReference = await _innovatricsService.CreateReferenceFaceWithOutBackGround(createReferenceFaceRequest);
+
+                if (createReference.ErrorMessage != null || createReference.ErrorCode != null)
+                {
+                    response.ErrorMessage = createReference.ErrorMessage;
+                    response.ErrorCode = createReference.ErrorCode;
+                    return response;
+                }
+
+                var updateUser = new UpdateUserFaceDataRequest
+                {
+                    UserId = faceRequest.UserId,
+                    FaceImageBase64 = createReference.Base64Image,
+                    FaceReferenceId = createReference.Id,
+                    ComputerSerialNumber = faceRequest.ComputerSerialNumber,
+                };
+
+                await UpdateUserWithReferenceFace(updateUser);
+
+                response.Id = createReference.Id;
+                response.Base64Image = createReference.Base64Image;
+
+                return response;
+            }
+            catch (Exception e)
+            {
+                return new RegisterFaceRequestResponse
+                {
+                    ErrorMessage = e.Message
+                };
+            }
         }
     }
 }

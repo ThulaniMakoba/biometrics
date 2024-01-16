@@ -9,12 +9,10 @@ namespace biometricService.Services
     {
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
-        private readonly IUserService _userService;
-        public InnovatricsService(IHttpService httpService, ILogService logService, IUserService userService)
+        public InnovatricsService(IHttpService httpService, ILogService logService)
         {
             _httpService = httpService;
             _logService = logService;
-            _userService = userService;
         }
         public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
         {
@@ -106,7 +104,7 @@ namespace biometricService.Services
 
             referenceFaceRequest.image.data = response.data;
 
-            Thread.Sleep(5000);
+            //Thread.Sleep(5000);
             var createReferenceFace = await CreateReferenceFace(referenceFaceRequest);
 
             if (createReferenceFace.ErrorCode != null || createReferenceFace.ErrorMessage != null)
@@ -124,7 +122,7 @@ namespace biometricService.Services
                 ComputerSerialNumber = referenceFaceRequest.ComputerSerialNumber
             };
 
-            await _userService.UpdateUserWithReferenceFace(updateUserWithReferenceFace);
+            //await _userService.UpdateUserWithReferenceFace(updateUserWithReferenceFace);
 
             return new CropFaceWithoutBackgroungResult
             {
@@ -141,15 +139,18 @@ namespace biometricService.Services
                 var response = await _httpService.PostAsync<PassiveLivenessTypeRequest, ScoreResponse>($"/identity/api/v1/customers/{customerId}/liveness/evaluation", referenceFaceRequest);
 
                 var convertedScored = double.Parse(response.Score, CultureInfo.InvariantCulture);
-                if (convertedScored < 0.89)
-                    _logService.Log($"Customer Id:{customerId} failed liveness");
 
-                return response ?? new ScoreResponse();
+                response.IsSuccess = convertedScored >= 0.89 ? true : false;
+                response.Score = string.Empty;
+                response.ErrorMessage = convertedScored < 0.89 ? "Score is below required threshold" : string.Empty;
+
+                return response;
             }
-            catch (Exception)
+            catch (Exception e)
             {
 
-                throw;
+                _logService.Log($"Evaluate liveness selfie with customerId:{customerId} has an exception has this exception error: {e.Message}");
+                return new ScoreResponse { ErrorMessage = e.Message };
             }
         }
     }

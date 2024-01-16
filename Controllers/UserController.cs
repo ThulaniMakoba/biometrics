@@ -30,6 +30,19 @@ namespace biometricService.Controllers
             return Ok(result);
         }
 
+        [HttpPost("register-face")]
+        public async Task<IActionResult> RegisterFace([FromBody] RegisterFaceRequest faceRequest)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _userService.RegisterFace(faceRequest);
+
+            return Ok(result);
+        }
+
         [HttpPost("probe-face")]
         public async Task<IActionResult> ProbeFace(ProbeFaceRequest request)
         {

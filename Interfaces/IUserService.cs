@@ -9,6 +9,7 @@ namespace biometricService.Interfaces
         Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request);
         Task<VerificationResponse> VerifyUser(VerificationRequest request);
         Task UpdateUserWithReferenceFace(UpdateUserFaceDataRequest request);
+        Task<RegisterFaceRequestResponse> RegisterFace(RegisterFaceRequest faceRequest);
 
     }
 }
