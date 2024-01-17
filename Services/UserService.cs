@@ -36,8 +36,10 @@ namespace biometricService.Services
                 var probeReferenceFaceResult = await ProbeFaceToReferenceFace(response.id, request.ReferenceFaceId);
                 var userDetails = new UserModel();
 
-                if (probeReferenceFaceResult != null)
-                    return await GetUserByFaceId(request.ReferenceFaceId);
+                if (probeReferenceFaceResult.IsSuccess)
+                    userDetails = await GetUserByFaceId(request.ReferenceFaceId);
+
+                userDetails.IsSuccess = probeReferenceFaceResult.IsSuccess;
 
                 return userDetails;
             }
