@@ -63,6 +63,7 @@ namespace biometricService.Services
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
+                Id = user.Id,
             };
         }
 
@@ -93,6 +94,7 @@ namespace biometricService.Services
         public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user)
         {
             var query = await _context.Users
+                .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.IdNumber == user.IdNumber && !x.Deleted);
 
             if (query != null)
@@ -107,17 +109,31 @@ namespace biometricService.Services
                 };
             }
 
+            const int defaultEdnaId = 100001;
+
+            var latestEdnaId = await _context.Users
+                .AsNoTracking()
+                .OrderByDescending(x => x.eDNAId)
+                .Select(x => x.eDNAId)
+                .FirstOrDefaultAsync();
+
+            if (latestEdnaId != 0)
+                latestEdnaId += 1;
+            else
+                latestEdnaId = defaultEdnaId;
+
             var userEntity = new User
             {
                 IdNumber = user.IdNumber,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Email = user.Email,              
+                Email = user.Email,
                 ComputerMotherboardSerialNumber = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.Now,
                 CreatedBy = defaultUser,
                 TransactionBy = defaultUser,
                 TransactionDate = DateTime.Now,
+                eDNAId = latestEdnaId,
                 Deleted = false,
             };
 
@@ -126,7 +142,12 @@ namespace biometricService.Services
 
             _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
 
-            return new RegisterUserResponse { UserId = userEntity.Id, Message = "Succefully register the user" };
+            return new RegisterUserResponse
+            {
+                UserId = userEntity.Id,
+                EdnaId = userEntity.eDNAId,
+                Message = "Succefully register the user"
+            };
         }
 
         public async Task UpdateUserWithReferenceFace(UpdateUserFaceDataRequest request)
@@ -181,5 +202,5 @@ namespace biometricService.Services
             response.ReferenceFaceId = query.InnovatricsFaceId;
             return response;
         }
-     }
+    }
 }

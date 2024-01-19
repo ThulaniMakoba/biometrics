@@ -19,6 +19,8 @@ namespace biometricService.Data.Entities
         public string? ComputerMotherboardSerialNumber { get; set; }
         public string? MobileIMEI { get; set; }
         public bool Deleted { get; set; }
+        [Required]
+        public int eDNAId { get; set; }
 
         public ICollection<FaceData> FaceData { get; set; }
     }

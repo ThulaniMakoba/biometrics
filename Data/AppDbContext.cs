@@ -1,5 +1,6 @@
 ﻿using biometricService.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace biometricService.Data
 {
@@ -10,8 +11,8 @@ namespace biometricService.Data
         {
             modelBuilder
                 .Entity<User>()
-            .Property(u => u.Id)
-            .ValueGeneratedOnAdd();
+                .Property(u => u.Id)
+                .ValueGeneratedOnAdd();
 
             modelBuilder
                 .Entity<User>()
