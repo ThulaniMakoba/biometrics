@@ -62,8 +62,7 @@ namespace biometricService.Services
             {
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Email = user.Email,
-                Id = user.Id,
+                Email = user.Email
             };
         }
 
@@ -182,25 +181,6 @@ namespace biometricService.Services
 
             _context.FaceData.Add(faceData);
             await _context.SaveChangesAsync();
-        }
-
-        public async Task<VerificationResponse> VerifyUser(VerificationRequest request)
-        {
-            var query = await _context.Users
-                 .Where(x => x.ComputerMotherboardSerialNumber == request.ComputerMotherboardSerialNumber && !x.Deleted)
-                 .FirstOrDefaultAsync();
-
-            var response = new VerificationResponse();
-
-            if (query == null)
-            {
-                response.UserExist = false;
-                return response;
-            }
-
-            response.UserExist = true;
-            response.ReferenceFaceId = query.InnovatricsFaceId;
-            return response;
         }
     }
 }

@@ -50,18 +50,5 @@ namespace biometricService.Controllers
             }
 
         }
-
-        [HttpPost("verify-user")]
-        public async Task<IActionResult> VerifyUser(VerificationRequest request)
-        {
-            if (request == null)
-            {
-                return BadRequest("Request is empty");
-            }
-
-            var response = await _userService.VerifyUser(request);
-
-            return Ok(response);
-        }
     }
 }
