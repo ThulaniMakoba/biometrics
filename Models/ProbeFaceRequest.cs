@@ -2,6 +2,7 @@
 {
     public class ProbeFaceRequest : CreateReferenceFaceRequest
     {
-        public Guid ReferenceFaceId { get; set; }
+        public int? EdnaId { get; set; }
+        public string? IdNumber { get; set; }
     }
 }

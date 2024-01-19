@@ -1,4 +1,6 @@
 using biometricService.Data;
+using biometricService.Data.Implementation;
+using biometricService.Data.Interfaces;
 using biometricService.Http;
 using biometricService.Interfaces;
 using biometricService.Services;
@@ -11,6 +13,9 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IInnovatricsService, InnovatricsService>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IFaceDataRepository, FaceDataRepository>();
 
 builder.Services.AddScoped<IHttpService, HttpService>();
 

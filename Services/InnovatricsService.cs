@@ -1,4 +1,7 @@
-﻿using biometricService.Interfaces;
+﻿using Azure.Core;
+using biometricService.Data.Entities;
+using biometricService.Data.Interfaces;
+using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using System.Globalization;
@@ -9,12 +12,15 @@ namespace biometricService.Services
     {
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
-        private readonly IUserService _userService;
-        public InnovatricsService(IHttpService httpService, ILogService logService, IUserService userService)
+        private readonly IUserRepository _userRepository;
+        private readonly IFaceDataRepository _faceDataRepository;
+        public InnovatricsService(IHttpService httpService, ILogService logService,
+            IUserRepository userRepository, IFaceDataRepository faceDataRepository)
         {
             _httpService = httpService;
             _logService = logService;
-            _userService = userService;
+            _userRepository = userRepository;
+            _faceDataRepository = faceDataRepository;
         }
         public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
         {
@@ -85,7 +91,6 @@ namespace biometricService.Services
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
@@ -96,9 +101,7 @@ namespace biometricService.Services
                 return new CropFaceWithoutBackgroungResult
                 {
                     ErrorMessage = "Failed creating crop face"
-
                 };
-
 
             var response = await _httpService.GetAsync<CropFaceRemoveBackgroundResponse>($"/identity/api/v1/faces/{faceId}/crop/removed-background");
             if (response.ErrorCode != null)
@@ -116,15 +119,28 @@ namespace biometricService.Services
                     ErrorCode = createReferenceFace.ErrorCode
                 };
 
-            var updateUserWithReferenceFace = new UpdateUserFaceDataRequest
+            var user = await _userRepository.FindById(referenceFaceRequest.UserId);
+
+            if (user == null)
             {
-                FaceImageBase64 = response.data,
+                return new CropFaceWithoutBackgroungResult
+                {
+                    ErrorMessage = "User does not existing for face capture"
+                };
+            }
+
+            var faceData = new FaceData()
+            {
+                UserId = user.Id,
                 FaceReferenceId = createReferenceFace.id,
-                UserId = referenceFaceRequest.UserId,
-                ComputerSerialNumber = referenceFaceRequest.ComputerSerialNumber
+                FaceBase64 = referenceFaceRequest.image.data,
+                CreatedDate = DateTime.Now,
+                CreatedBy = "SysAdmin",
+                TransactionBy = "SysAdmin",
+                TransactionDate = DateTime.Now,
             };
 
-            await _userService.UpdateUserWithReferenceFace(updateUserWithReferenceFace);
+            await _faceDataRepository.Add(faceData);
 
             return new CropFaceWithoutBackgroungResult
             {
@@ -148,7 +164,6 @@ namespace biometricService.Services
             }
             catch (Exception)
             {
-
                 throw;
             }
         }

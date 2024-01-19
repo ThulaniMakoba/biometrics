@@ -1,5 +1,7 @@
-﻿using biometricService.Data;
+﻿using Azure.Core;
+using biometricService.Data;
 using biometricService.Data.Entities;
+using biometricService.Data.Interfaces;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
@@ -10,34 +12,64 @@ namespace biometricService.Services
 {
     public class UserService : IUserService
     {
-        private readonly AppDbContext _context;
+        private readonly IUserRepository _userRepository;
         private readonly IHttpService _httpService;
         private readonly ILogService _logService;
+        private readonly IInnovatricsService _innovatricsService;
+        private readonly IFaceDataRepository _faceDataRepository;
 
         const string defaultUser = "SysAdmin";
 
-        public UserService(AppDbContext context, IHttpService httpService, ILogService logService)
+        public UserService(IUserRepository userRepository, IHttpService httpService, ILogService logService,
+            IInnovatricsService innovatricsService, IFaceDataRepository faceDataRepository)
         {
-            _context = context;
+            _userRepository = userRepository;
             _httpService = httpService;
             _logService = logService;
+            _innovatricsService = innovatricsService;
+            _faceDataRepository = faceDataRepository;
         }
 
         public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
         {
             try
             {
-                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
+                var user = new User();
+                if (request.EdnaId != null)
+                    user = await _userRepository.FindUserByEdnaId((int)request.EdnaId);
+
+                if (!string.IsNullOrEmpty(request.IdNumber))
+                    user = await _userRepository.FindUserByIdNumber(request.IdNumber);
+
+                if (user == null)
+                    return new UserModel { IsSuccess = false };
+
+                var faceData = await _faceDataRepository.FindByUserId(user.Id);
+
+                if (faceData == null)
+                    return new UserModel { IsSuccess = false };
+
+                var existingFace = await _innovatricsService.CreateReferenceFace(new CreateReferenceFaceRequest
+                {
+                    detection = request.detection,
+                    image = new Image { data = faceData.FaceBase64 },
+                });
+
+                var probeFace = await _innovatricsService.CreateReferenceFace(new CreateReferenceFaceRequest
                 {
                     image = request.image,
                     detection = request.detection,
                 });
 
-                var probeReferenceFaceResult = await ProbeFaceToReferenceFace(response.id, request.ReferenceFaceId);
+                var probeReferenceFaceResult = await ProbeFaceToReferenceFace(probeFace.id, existingFace.id);
                 var userDetails = new UserModel();
 
                 if (probeReferenceFaceResult.IsSuccess)
-                    userDetails = await GetUserByFaceId(request.ReferenceFaceId);
+                {
+                    userDetails.FirstName = user.FirstName;
+                    userDetails.LastName = user.LastName;
+                    userDetails.Email = user.Email;
+                }
 
                 userDetails.IsSuccess = probeReferenceFaceResult.IsSuccess;
 
@@ -47,23 +79,6 @@ namespace biometricService.Services
             {
                 return new UserModel { ErrorMessage = e.Message };
             }
-
-        }
-
-        private async Task<UserModel> GetUserByFaceId(Guid referenceFaceId)
-        {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(x => x.InnovatricsFaceId == referenceFaceId);
-
-            if (user == null)
-                return new UserModel();
-
-            return new UserModel
-            {
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email
-            };
         }
 
         private async Task<ScoreResponse> ProbeFaceToReferenceFace(Guid probeFaceId, Guid referenceFaceId)
@@ -92,29 +107,23 @@ namespace biometricService.Services
 
         public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user)
         {
-            var query = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.IdNumber == user.IdNumber && !x.Deleted);
+            var query = await _userRepository.FindUserByIdNumber(user.IdNumber);
 
             if (query != null)
             {
-                string message = $"Cannot register a new user on this computer, already an existing user." +
+                string message = $"User exist" +
                     $"Failed user details FirstName: {user.FirstName}, LastName: {user.LastName}";
                 _logService.Log(message);
 
                 return new RegisterUserResponse
                 {
-                    Message = "Cannot register a new user on this computer, already an existing user.",
+                    Message = "User exist",
                 };
             }
 
             const int defaultEdnaId = 100001;
 
-            var latestEdnaId = await _context.Users
-                .AsNoTracking()
-                .OrderByDescending(x => x.eDNAId)
-                .Select(x => x.eDNAId)
-                .FirstOrDefaultAsync();
+            var latestEdnaId = await _userRepository.LatestEdnId();
 
             if (latestEdnaId != 0)
                 latestEdnaId += 1;
@@ -136,8 +145,7 @@ namespace biometricService.Services
                 Deleted = false,
             };
 
-            _context.Users.Add(userEntity);
-            await _context.SaveChangesAsync();
+            await _userRepository.Add(userEntity);
 
             _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
 
@@ -147,40 +155,6 @@ namespace biometricService.Services
                 EdnaId = userEntity.eDNAId,
                 Message = "Succefully register the user"
             };
-        }
-
-        public async Task UpdateUserWithReferenceFace(UpdateUserFaceDataRequest request)
-        {
-            if (request == null)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == request.UserId);
-
-            if (user == null)
-            {
-                throw new ArgumentNullException(nameof(user));
-            }
-
-            user.UpdatedDate = DateTime.Now;
-            user.InnovatricsFaceId = request.FaceReferenceId;
-            user.ComputerMotherboardSerialNumber = request.ComputerSerialNumber;
-            user.UpdatedBy = defaultUser;
-
-            var faceData = new FaceData()
-            {
-                UserId = user.Id,
-                FaceReferenceId = request.FaceReferenceId,
-                FaceBase64 = request.FaceImageBase64,
-                CreatedDate = DateTime.Now,
-                CreatedBy = defaultUser,
-                TransactionBy = defaultUser,
-                TransactionDate = DateTime.Now,
-            };
-
-            _context.FaceData.Add(faceData);
-            await _context.SaveChangesAsync();
         }
     }
 }
