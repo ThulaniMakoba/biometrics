@@ -5,29 +5,63 @@ using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using System.Globalization;
+using System.Net.Http.Formatting;
+using System.Net.Http;
+using biometricService.Http;
+using System.Net;
+using Microsoft.AspNetCore.Http;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Security.Cryptography;
 
 namespace biometricService.Services
 {
     public class InnovatricsService : IInnovatricsService
     {
-        private readonly IHttpService _httpService;
+        private readonly IHttpClientFactory _httpClientFactory;
+
         private readonly ILogService _logService;
         private readonly IUserRepository _userRepository;
         private readonly IFaceDataRepository _faceDataRepository;
-        public InnovatricsService(IHttpService httpService, ILogService logService,
-            IUserRepository userRepository, IFaceDataRepository faceDataRepository)
+        private readonly ITokenService _tokenService;
+
+        public InnovatricsService(
+            ILogService logService,
+            IUserRepository userRepository,
+            IFaceDataRepository faceDataRepository,
+            IHttpClientFactory httpClientFactory,
+            ITokenService tokenService)
         {
-            _httpService = httpService;
             _logService = logService;
             _userRepository = userRepository;
             _faceDataRepository = faceDataRepository;
+            _httpClientFactory = httpClientFactory;
+            _tokenService = tokenService;
         }
         public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
         {
+            var result = await CreateCustomer();
+
+            if (result.Id == null)
+                result = await CreateInnovatricsCustomer();
+
+            return result;
+        }
+
+        private async Task<CreateCustomerResponse> CreateCustomer()
+        {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
-                var response = await _httpService.PostAsync<CreateCustomerResponse>("/identity/api/v1/customers");
-                return response ?? new CreateCustomerResponse();
+                var request = new HttpRequestMessage(HttpMethod.Post, "/identity/api/v1/customers")
+                {
+                    Content = new ObjectContent<CreateCustomerResponse>(null, new JsonMediaTypeFormatter())
+                };
+
+                AddAuthorizationHeader(request);
+                HttpResponseMessage response = await client.SendAsync(request);
+                var result = await HandleResponse<CreateCustomerResponse>(response);
+                return result ?? new CreateCustomerResponse();
             }
             catch (Exception)
             {
@@ -37,10 +71,20 @@ namespace biometricService.Services
 
         public async Task<CreateLivenessResponse> CreateLiveness(Guid customerId)
         {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
-                var response = await _httpService.PutAsync<CreateLivenessResponse>($"/identity/api/v1/customers/{customerId}/liveness");
-                return response ?? new CreateLivenessResponse();
+                var request = new HttpRequestMessage(HttpMethod.Put, $"/identity/api/v1/customers/{customerId}/liveness")
+                {
+                    Content = new ObjectContent<object>(null, new JsonMediaTypeFormatter())
+                };
+
+                AddAuthorizationHeader(request);
+                HttpResponseMessage response = await client.SendAsync(request);
+
+                var result = await HandleResponse<CreateLivenessResponse>(response);
+                return result ?? new CreateLivenessResponse();
             }
             catch (Exception)
             {
@@ -50,11 +94,22 @@ namespace biometricService.Services
 
         public async Task CreateLivenessSelfie(Guid customerId, CreateLivenessSelfieRequest request)
         {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
-                var response = await _httpService.PostAsync<CreateLivenessSelfieRequest, ErrorMessageModel>($"/identity/api/v1/customers/{customerId}/liveness/selfies", request);
-                if (response.ErrorCode != null)
-                    throw new Exception(response.ErrorCode);
+                var requestData = new HttpRequestMessage(HttpMethod.Post, $"/identity/api/v1/customers/{customerId}/liveness/selfies")
+                {
+                    Content = new ObjectContent<CreateLivenessSelfieRequest>(request, new JsonMediaTypeFormatter())
+                };
+
+                AddAuthorizationHeader(requestData);
+                HttpResponseMessage response = await client.SendAsync(requestData);
+
+                var result = await HandleResponse<ErrorMessageModel>(response);
+
+                if (result.ErrorCode != null)
+                    throw new Exception(result.ErrorCode);
             }
             catch (Exception)
             {
@@ -64,18 +119,30 @@ namespace biometricService.Services
 
         public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
         {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
-                var response = await _httpService.PostAsync<ReferenceFaceRequest, CreateReferenceFaceResponse>("/identity/api/v1/faces", new ReferenceFaceRequest
+                var data = new ReferenceFaceRequest
                 {
                     image = request.image,
                     detection = request.detection
-                });
+                };
 
-                if (response.ErrorCode != null)
-                    return new CreateReferenceFaceResponse { ErrorCode = response.ErrorCode, ErrorMessage = response.ErrorMessage };
+                var requestCall = new HttpRequestMessage(HttpMethod.Post, "/identity/api/v1/faces")
+                {
+                    Content = new ObjectContent<ReferenceFaceRequest>(data, new JsonMediaTypeFormatter())
+                };
 
-                return response;
+                AddAuthorizationHeader(requestCall);
+                HttpResponseMessage response = await client.SendAsync(requestCall);
+
+                var result = await HandleResponse<CreateReferenceFaceResponse>(response);
+
+                if (result.ErrorCode != null)
+                    return new CreateReferenceFaceResponse { ErrorCode = result.ErrorCode, ErrorMessage = result.ErrorMessage };
+
+                return result;
             }
             catch (Exception e)
             {
@@ -103,25 +170,28 @@ namespace biometricService.Services
                     ErrorMessage = "Failed creating crop face"
                 };
 
-            var response = await _httpService.GetAsync<CropFaceRemoveBackgroundResponse>($"/identity/api/v1/faces/{faceId}/crop/removed-background");
-            if (response.ErrorCode != null)
-                throw new Exception(response.ErrorCode);
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
 
-            referenceFaceRequest.image.data = response.data;
+            var request = new HttpRequestMessage(HttpMethod.Get, $"/identity/api/v1/faces/{faceId}/crop/removed-background")
+            {
+                Content = new ObjectContent<object>(null, new JsonMediaTypeFormatter())
+            };
 
-            Thread.Sleep(5000);
-            var createReferenceFace = await CreateReferenceFace(referenceFaceRequest);
+            AddAuthorizationHeader(request);
 
-            if (createReferenceFace.ErrorCode != null || createReferenceFace.ErrorMessage != null)
-                return new CropFaceWithoutBackgroungResult
-                {
-                    ErrorMessage = createReferenceFace.ErrorMessage,
-                    ErrorCode = createReferenceFace.ErrorCode
-                };
+            HttpResponseMessage response = await client.SendAsync(request);
+
+            var result = await HandleResponse<CropFaceRemoveBackgroundResponse>(response);
+
+            if (result.ErrorCode != null)
+                throw new Exception(result.ErrorCode);
+
+            referenceFaceRequest.image.data = result.data;
 
             var user = await _userRepository.FindById(referenceFaceRequest.UserId);
 
-            if (user == null)
+            if (user.Id == 0)
             {
                 return new CropFaceWithoutBackgroungResult
                 {
@@ -132,7 +202,7 @@ namespace biometricService.Services
             var faceData = new FaceData()
             {
                 UserId = user.Id,
-                FaceReferenceId = createReferenceFace.id,
+                FaceReferenceId = null,
                 FaceBase64 = referenceFaceRequest.image.data,
                 CreatedDate = DateTime.Now,
                 CreatedBy = "SysAdmin",
@@ -145,26 +215,65 @@ namespace biometricService.Services
             return new CropFaceWithoutBackgroungResult
             {
                 Base64Image = referenceFaceRequest.image.data,
-                Id = createReferenceFace.id
             };
         }
 
         public async Task<ScoreResponse> EvaluateLivenesSelfie(Guid customerId)
         {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
                 var referenceFaceRequest = new PassiveLivenessTypeRequest { type = "PASSIVE_LIVENESS" };
-                var response = await _httpService.PostAsync<PassiveLivenessTypeRequest, ScoreResponse>($"/identity/api/v1/customers/{customerId}/liveness/evaluation", referenceFaceRequest);
 
-                var convertedScored = double.Parse(response.Score, CultureInfo.InvariantCulture);
+                var request = new HttpRequestMessage(HttpMethod.Post, $"/identity/api/v1/customers/{customerId}/liveness/evaluation")
+                {
+                    Content = new ObjectContent<PassiveLivenessTypeRequest>(referenceFaceRequest, new JsonMediaTypeFormatter())
+                };
+
+                AddAuthorizationHeader(request);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+
+                var result = await HandleResponse<ScoreResponse>(response);
+
+                var convertedScored = double.Parse(result.Score, CultureInfo.InvariantCulture);
                 if (convertedScored < 0.89)
                     _logService.Log($"Customer Id:{customerId} failed liveness");
 
-                return response ?? new ScoreResponse();
+                return result ?? new ScoreResponse();
             }
             catch (Exception)
             {
                 throw;
+            }
+        }
+
+        private void AddAuthorizationHeader(HttpRequestMessage request)
+        {
+            string token = _tokenService.GetToken();
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                _tokenService.AddBearerToken(request, token);
+            }
+        }
+
+        public static async Task<T> HandleResponse<T>(HttpResponseMessage response)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<T>();
+            }
+            else if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                return await response.Content.ReadAsAsync<T>();
+                //Need to find a solution....
+                //throw new HttpRequestException($"Error: {response.StatusCode} - Details {response.ReasonPhrase}");
+            }
+            else
+            {
+                throw new HttpRequestException($"Error: {response.StatusCode} - {response.ReasonPhrase}");
             }
         }
     }

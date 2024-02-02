@@ -10,10 +10,11 @@ namespace biometricService.Http
 
         private readonly ITokenService _tokenService;
 
-        public HttpService(HttpClient httpClient, ITokenService tokenService)
+        public HttpService(HttpClient client, ITokenService tokenService)
         {
             _tokenService = tokenService;
-            _httpClient = httpClient;
+            _httpClient = client;
+            _httpClient.BaseAddress = new Uri("https://dot.innovatrics.com");
         }
 
         public async Task<TResult> PostAsync<TRequest, TResult>(string endpoint, TRequest data)
@@ -25,7 +26,7 @@ namespace biometricService.Http
 
             AddAuthorizationHeader(request);
 
-            HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
 
             return await HandleResponse<TResult>(response);
 

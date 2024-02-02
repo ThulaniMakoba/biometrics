@@ -8,21 +8,24 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpClient();
 builder.Services.AddTransient<BearerTokenHandler>();
+
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<IInnovatricsService, InnovatricsService>();
+
+builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFaceDataRepository, FaceDataRepository>();
 
-builder.Services.AddScoped<IHttpService, HttpService>();
+//builder.Services.AddScoped<IHttpService, HttpService>();
 
-builder.Services.AddHttpClient<IHttpService, HttpService>(client =>
-{
-    client.BaseAddress = new Uri("https://dot.innovatrics.com");
-});
+//builder.Services.AddHttpClient<IHttpService, HttpService>(client =>
+//{
+//    client.BaseAddress = new Uri("https://dot.innovatrics.com");
+//});
 
 builder.Services.AddScoped<ITokenService, TokenService>();
 

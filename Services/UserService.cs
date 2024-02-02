@@ -1,33 +1,44 @@
 ﻿using Azure.Core;
-using biometricService.Data;
 using biometricService.Data.Entities;
 using biometricService.Data.Interfaces;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
-using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Net.Http.Formatting;
+using System.Net.Http;
+using biometricService.Http;
+using System.Net;
 
 namespace biometricService.Services
 {
     public class UserService : IUserService
     {
+        private readonly IHttpClientFactory _httpClientFactory;
+
         private readonly IUserRepository _userRepository;
-        private readonly IHttpService _httpService;
         private readonly ILogService _logService;
         private readonly IInnovatricsService _innovatricsService;
         private readonly IFaceDataRepository _faceDataRepository;
+        private readonly ITokenService _tokenService;
 
         const string defaultUser = "SysAdmin";
 
-        public UserService(IUserRepository userRepository, IHttpService httpService, ILogService logService,
-            IInnovatricsService innovatricsService, IFaceDataRepository faceDataRepository)
+        public UserService(
+            IUserRepository userRepository,
+            ILogService logService,
+            IInnovatricsService innovatricsService,
+            IFaceDataRepository faceDataRepository,
+            IHttpClientFactory httpClientFactory,
+            ITokenService tokenService)
         {
             _userRepository = userRepository;
-            _httpService = httpService;
             _logService = logService;
             _innovatricsService = innovatricsService;
             _faceDataRepository = faceDataRepository;
+            _httpClientFactory = httpClientFactory;
+            _tokenService = tokenService;
         }
 
         public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
@@ -83,25 +94,35 @@ namespace biometricService.Services
 
         private async Task<ScoreResponse> ProbeFaceToReferenceFace(Guid probeFaceId, Guid referenceFaceId)
         {
+            HttpClient client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri("https://dot.innovatrics.com");
             try
             {
-                var request = new ReferenceFaceApi() { referenceFace = $"/api/v1/faces/{referenceFaceId.ToString().ToLower()}" };
 
-                var response = await _httpService.PostAsync<ReferenceFaceApi, ScoreResponse>($"/identity/api/v1/faces/{probeFaceId}/similarity", request);
-                _logService.Log($"The combination of ProbeFaceId: {probeFaceId} and ReferenceFaceId: {referenceFaceId},has this score result: {response.Score}");
+                var data = new ReferenceFaceApi() { referenceFace = $"/api/v1/faces/{referenceFaceId.ToString().ToLower()}" };
 
-                double score = double.Parse(response.Score, CultureInfo.InvariantCulture);
-                response.IsSuccess = score >= 0.89 ? true : false;
-                response.Score = string.Empty;
-                response.ErrorMessage = score < 0.89 ? "Score is below required threshold" : string.Empty;
+                var request = new HttpRequestMessage(HttpMethod.Post, $"/identity/api/v1/faces/{probeFaceId}/similarity")
+                {
+                    Content = new ObjectContent<ReferenceFaceApi>(data, new JsonMediaTypeFormatter())
+                };
 
-                return response;
+                AddAuthorizationHeader(request);
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                var result = await HandleResponse<ScoreResponse>(response);
+
+                double score = double.Parse(result.Score, CultureInfo.InvariantCulture);
+
+                result.IsSuccess = score >= 0.89 ? true : false;
+                result.Score = string.Empty;
+                result.ErrorMessage = score < 0.89 ? "Score is below required threshold" : string.Empty;
+
+                return result;
             }
             catch (Exception e)
             {
                 _logService.Log($"The combination of ProbeFaceId: {probeFaceId} and ReferenceFaceId: {referenceFaceId},has this message: {e.Message}");
                 return new ScoreResponse { ErrorMessage = e.Message };
-
             }
         }
 
@@ -117,7 +138,7 @@ namespace biometricService.Services
 
                 return new RegisterUserResponse
                 {
-                    Message = "User exist",
+                    Message = "User has already registered",
                 };
             }
 
@@ -147,14 +168,40 @@ namespace biometricService.Services
 
             await _userRepository.Add(userEntity);
 
-            _logService.Log($"\"Succefully register the user with id\": {userEntity.Id}");
-
             return new RegisterUserResponse
             {
                 UserId = userEntity.Id,
                 EdnaId = userEntity.eDNAId,
-                Message = "Succefully register the user"
+                Message = "Succefully registered the user"
             };
+        }
+
+        private void AddAuthorizationHeader(HttpRequestMessage request)
+        {
+            string token = _tokenService.GetToken();
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                _tokenService.AddBearerToken(request, token);
+            }
+        }
+
+        public static async Task<T> HandleResponse<T>(HttpResponseMessage response)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<T>();
+            }
+            else if (response.StatusCode == HttpStatusCode.BadRequest)
+            {
+                return await response.Content.ReadAsAsync<T>();
+                //Need to find a solution....
+                //throw new HttpRequestException($"Error: {response.StatusCode} - Details {response.ReasonPhrase}");
+            }
+            else
+            {
+                throw new HttpRequestException($"Error: {response.StatusCode} - {response.ReasonPhrase}");
+            }
         }
     }
 }
