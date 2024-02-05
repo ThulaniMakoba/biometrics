@@ -3,10 +3,18 @@ using biometricService.Data.Implementation;
 using biometricService.Data.Interfaces;
 using biometricService.Http;
 using biometricService.Interfaces;
+using biometricService.Models;
 using biometricService.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.json");
+
+var appSettings = new AppSettings();
+builder.Configuration.Bind(appSettings);
+builder.Services.AddSingleton(appSettings);
+
+builder.Services.AddSingleton(new LdapService($"LDAP://{appSettings.DomainName}"));
 
 builder.Services.AddHttpClient();
 builder.Services.AddTransient<BearerTokenHandler>();
@@ -19,6 +27,7 @@ builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IFaceDataRepository, FaceDataRepository>();
+
 
 //builder.Services.AddScoped<IHttpService, HttpService>();
 

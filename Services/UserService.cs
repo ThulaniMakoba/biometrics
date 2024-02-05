@@ -1,15 +1,11 @@
-﻿using Azure.Core;
-using biometricService.Data.Entities;
+﻿using biometricService.Data.Entities;
 using biometricService.Data.Interfaces;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using System.Globalization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Net.Http.Formatting;
-using System.Net.Http;
-using biometricService.Http;
 using System.Net;
+using System.Net.Http.Formatting;
 
 namespace biometricService.Services
 {
@@ -22,6 +18,8 @@ namespace biometricService.Services
         private readonly IInnovatricsService _innovatricsService;
         private readonly IFaceDataRepository _faceDataRepository;
         private readonly ITokenService _tokenService;
+        private readonly LdapService _ldapService;
+        private readonly AppSettings _appSettings;
 
         const string defaultUser = "SysAdmin";
 
@@ -31,7 +29,9 @@ namespace biometricService.Services
             IInnovatricsService innovatricsService,
             IFaceDataRepository faceDataRepository,
             IHttpClientFactory httpClientFactory,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            LdapService ldapService,
+            AppSettings appSettings)
         {
             _userRepository = userRepository;
             _logService = logService;
@@ -39,6 +39,8 @@ namespace biometricService.Services
             _faceDataRepository = faceDataRepository;
             _httpClientFactory = httpClientFactory;
             _tokenService = tokenService;
+            _ldapService = ldapService;
+            _appSettings = appSettings;
         }
 
         public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
@@ -142,6 +144,25 @@ namespace biometricService.Services
                 };
             }
 
+            if (!IsDomainNameCorrect(user.Email))
+            {
+                return new RegisterUserResponse
+                {
+                    Message = "Domain name from the user's email does not match with Active Directory",
+                };
+            }
+
+            var username = GetUsernameFromEmail(user.Email);
+            bool usernameExists = _ldapService.IsUsernameInActiveDirectory(username);
+
+            if (!usernameExists)
+            {
+                return new RegisterUserResponse
+                {
+                    Message = "User's email does not exist in Active Directory",
+                };
+            }
+
             const int defaultEdnaId = 100001;
 
             var latestEdnaId = await _userRepository.LatestEdnId();
@@ -202,6 +223,26 @@ namespace biometricService.Services
             {
                 throw new HttpRequestException($"Error: {response.StatusCode} - {response.ReasonPhrase}");
             }
+        }
+
+        private string GetUsernameFromEmail(string email)
+        {
+            int atIndex = email.IndexOf('@');
+            if (atIndex == -1)
+                return email;
+            return email.Substring(0, atIndex);
+        }
+
+        private bool IsDomainNameCorrect(string email)
+        {
+            string[] parts = email.Split('@');
+
+            if (parts.Length != 2)
+                return false;
+
+            string domain = parts[1];
+
+            return domain == _appSettings.DomainName;
         }
     }
 }
