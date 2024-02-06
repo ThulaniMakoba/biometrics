@@ -3,6 +3,7 @@ using biometricService.Data.Interfaces;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
+using Microsoft.AspNetCore.Identity.Data;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Formatting;
@@ -48,6 +49,11 @@ namespace biometricService.Services
             try
             {
                 var user = new User();
+
+                if (!string.IsNullOrEmpty(request.Email))
+                    if (_ldapService.IsUsernameInActiveDirectory(GetUsernameFromEmail(request.Email)))
+                        user = await _userRepository.FindUserByEmail(request.Email);
+
                 if (request.EdnaId != null)
                     user = await _userRepository.FindUserByEdnaId((int)request.EdnaId);
 
@@ -128,23 +134,24 @@ namespace biometricService.Services
             }
         }
 
-        public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user)
+        public async Task<RegisterUserResponse> RegisterUser(UserRegisterRequest registerRequest)
         {
-            var query = await _userRepository.FindUserByIdNumber(user.IdNumber);
+            var user = await _userRepository.FindUserByIdNumber(registerRequest.IdNumber);
 
-            if (query != null)
+            if (user != null)
             {
-                string message = $"User exist" +
-                    $"Failed user details FirstName: {user.FirstName}, LastName: {user.LastName}";
-                _logService.Log(message);
-
-                return new RegisterUserResponse
-                {
-                    Message = "User has already registered",
-                };
+                return UserAlreadyExistResponse(registerRequest);
             }
 
-            if (!IsDomainNameCorrect(user.Email))
+            if (user == null)
+                user = await _userRepository.FindUserByEmail(registerRequest.Email);
+
+            if (user != null)
+            {
+                return UserAlreadyExistResponse(registerRequest);
+            }
+
+            if (!IsDomainNameCorrect(registerRequest.Email))
             {
                 return new RegisterUserResponse
                 {
@@ -152,7 +159,7 @@ namespace biometricService.Services
                 };
             }
 
-            var username = GetUsernameFromEmail(user.Email);
+            var username = GetUsernameFromEmail(registerRequest.Email);
             bool usernameExists = _ldapService.IsUsernameInActiveDirectory(username);
 
             if (!usernameExists)
@@ -174,10 +181,10 @@ namespace biometricService.Services
 
             var userEntity = new User
             {
-                IdNumber = user.IdNumber,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
+                IdNumber = registerRequest.IdNumber,
+                FirstName = registerRequest.FirstName,
+                LastName = registerRequest.LastName,
+                Email = registerRequest.Email,
                 ComputerMotherboardSerialNumber = Guid.NewGuid().ToString(),
                 CreatedDate = DateTime.Now,
                 CreatedBy = defaultUser,
@@ -243,6 +250,17 @@ namespace biometricService.Services
             string domain = parts[1];
 
             return domain == _appSettings.DomainName;
+        }
+
+        private RegisterUserResponse UserAlreadyExistResponse(UserRegisterRequest request)
+        {
+            _logService.Log($"User exist" +
+            $"Failed user details FirstName: {request.FirstName}, LastName: {request.LastName}");
+
+            return new RegisterUserResponse
+            {
+                Message = "User has already registered",
+            };
         }
     }
 }

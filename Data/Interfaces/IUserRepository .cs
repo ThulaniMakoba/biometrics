@@ -6,6 +6,7 @@ namespace biometricService.Data.Interfaces
     {
         Task<User> FindUserByEdnaId(int ednaId);
         Task<User> FindUserByIdNumber(string idNumber);
+        Task<User> FindUserByEmail(string email);
         Task<int> LatestEdnId();
     }
 }
