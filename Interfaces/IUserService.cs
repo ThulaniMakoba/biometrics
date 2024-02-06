@@ -6,6 +6,7 @@ namespace biometricService.Interfaces
     public interface IUserService
     {
         Task<RegisterUserResponse> RegisterUser(UserRegisterRequest user);
-        Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request);
+        Task<UserModel> ProbeReferenceFace(CreateReferenceFaceRequest request);
+        Task<UserModel> ValidateAuthenticationOption(AuthenticationOptionRequest request);
     }
 }

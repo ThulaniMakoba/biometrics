@@ -31,7 +31,7 @@ namespace biometricService.Controllers
         }
 
         [HttpPost("probe-face")]
-        public async Task<IActionResult> ProbeFace(ProbeFaceRequest request)
+        public async Task<IActionResult> ProbeFace(CreateReferenceFaceRequest request)
         {
             if (request == null)
             {
@@ -48,7 +48,26 @@ namespace biometricService.Controllers
             {
                 return BadRequest("Error calling Innovatrics API");
             }
+        }
 
+        [HttpPost("validate-authentication-option")]
+        public async Task<IActionResult> ValidateAuthenticationOption(AuthenticationOptionRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest("Request is empty");
+            }
+
+            var response = await _userService.ValidateAuthenticationOption(request);
+
+            if (response != null)
+            {
+                return Ok(response);
+            }
+            else
+            {
+                return BadRequest("Error calling Innovatrics API");
+            }
         }
     }
 }

@@ -44,26 +44,39 @@ namespace biometricService.Services
             _appSettings = appSettings;
         }
 
-        public async Task<UserModel> ProbeReferenceFace(ProbeFaceRequest request)
+        public async Task<UserModel> ValidateAuthenticationOption(AuthenticationOptionRequest request)
+        {
+            var user = new User();
+
+            if (!string.IsNullOrEmpty(request.Email))
+                if (_ldapService.IsUsernameInActiveDirectory(GetUsernameFromEmail(request.Email)))
+                    user = await _userRepository.FindUserByEmail(request.Email);
+
+            if (request.EdnaId != null)
+                user = await _userRepository.FindUserByEdnaId((int)request.EdnaId);
+
+            if (!string.IsNullOrEmpty(request.IdNumber))
+                user = await _userRepository.FindUserByIdNumber(request.IdNumber);
+
+            if (user?.Id == 0)
+                return new UserModel { IsSuccess = false };
+
+            return new UserModel
+            {
+                IsSuccess = true,
+                UserId = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email
+
+            };
+        }
+        public async Task<UserModel> ProbeReferenceFace(CreateReferenceFaceRequest request)
         {
             try
             {
-                var user = new User();
 
-                if (!string.IsNullOrEmpty(request.Email))
-                    if (_ldapService.IsUsernameInActiveDirectory(GetUsernameFromEmail(request.Email)))
-                        user = await _userRepository.FindUserByEmail(request.Email);
-
-                if (request.EdnaId != null)
-                    user = await _userRepository.FindUserByEdnaId((int)request.EdnaId);
-
-                if (!string.IsNullOrEmpty(request.IdNumber))
-                    user = await _userRepository.FindUserByIdNumber(request.IdNumber);
-
-                if (user == null)
-                    return new UserModel { IsSuccess = false };
-
-                var faceData = await _faceDataRepository.FindByUserId(user.Id);
+                var faceData = await _faceDataRepository.FindByUserId(request.UserId);
 
                 if (faceData == null)
                     return new UserModel { IsSuccess = false };
@@ -82,13 +95,6 @@ namespace biometricService.Services
 
                 var probeReferenceFaceResult = await ProbeFaceToReferenceFace(probeFace.id, existingFace.id);
                 var userDetails = new UserModel();
-
-                if (probeReferenceFaceResult.IsSuccess)
-                {
-                    userDetails.FirstName = user.FirstName;
-                    userDetails.LastName = user.LastName;
-                    userDetails.Email = user.Email;
-                }
 
                 userDetails.IsSuccess = probeReferenceFaceResult.IsSuccess;
 
