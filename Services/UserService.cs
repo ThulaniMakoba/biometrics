@@ -58,7 +58,7 @@ namespace biometricService.Services
             if (!string.IsNullOrEmpty(request.IdNumber))
                 user = await _userRepository.FindUserByIdNumber(request.IdNumber);
 
-            if (user?.Id == 0)
+            if (user == null || user?.Id == 0)
                 return new UserModel { IsSuccess = false };
 
             return new UserModel
