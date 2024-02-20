@@ -1,8 +1,6 @@
 ﻿using biometricService.Interfaces;
 using biometricService.Models;
 using Microsoft.AspNetCore.Mvc;
-using System.DirectoryServices.AccountManagement;
-
 
 namespace biometricService.Controllers
 {
@@ -15,6 +13,13 @@ namespace biometricService.Controllers
         public UserController(IUserService userService)
         {
             _userService = userService;
+        }
+
+        [HttpGet("echo")]
+        public IActionResult Get()
+        {
+            var data = new { message = "Echoiing.....!" };
+            return Ok(data);
         }
 
         [HttpPost("register")]
