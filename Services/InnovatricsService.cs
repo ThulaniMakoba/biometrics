@@ -1,17 +1,11 @@
-﻿using Azure.Core;
-using biometricService.Data.Entities;
+﻿using biometricService.Data.Entities;
 using biometricService.Data.Interfaces;
 using biometricService.Interfaces;
 using biometricService.Models;
 using biometricService.Models.Responses;
 using System.Globalization;
-using System.Net.Http.Formatting;
-using System.Net.Http;
-using biometricService.Http;
 using System.Net;
-using Microsoft.AspNetCore.Http;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Security.Cryptography;
+using System.Net.Http.Formatting;
 
 namespace biometricService.Services
 {
@@ -23,19 +17,22 @@ namespace biometricService.Services
         private readonly IUserRepository _userRepository;
         private readonly IFaceDataRepository _faceDataRepository;
         private readonly ITokenService _tokenService;
+        private readonly AppSettings _appSettings;
 
         public InnovatricsService(
             ILogService logService,
             IUserRepository userRepository,
             IFaceDataRepository faceDataRepository,
             IHttpClientFactory httpClientFactory,
-            ITokenService tokenService)
+            ITokenService tokenService,
+            AppSettings appSettings)
         {
             _logService = logService;
             _userRepository = userRepository;
             _faceDataRepository = faceDataRepository;
             _httpClientFactory = httpClientFactory;
             _tokenService = tokenService;
+            _appSettings = appSettings;
         }
         public async Task<CreateCustomerResponse> CreateInnovatricsCustomer()
         {
@@ -50,7 +47,7 @@ namespace biometricService.Services
         private async Task<CreateCustomerResponse> CreateCustomer()
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
                 var request = new HttpRequestMessage(HttpMethod.Post, "/identity/api/v1/customers")
@@ -63,16 +60,16 @@ namespace biometricService.Services
                 var result = await HandleResponse<CreateCustomerResponse>(response);
                 return result ?? new CreateCustomerResponse();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                throw new HttpRequestException(e.Message, e.InnerException);
             }
         }
 
         public async Task<CreateLivenessResponse> CreateLiveness(Guid customerId)
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
                 var request = new HttpRequestMessage(HttpMethod.Put, $"/identity/api/v1/customers/{customerId}/liveness")
@@ -95,7 +92,7 @@ namespace biometricService.Services
         public async Task CreateLivenessSelfie(Guid customerId, CreateLivenessSelfieRequest request)
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
                 var requestData = new HttpRequestMessage(HttpMethod.Post, $"/identity/api/v1/customers/{customerId}/liveness/selfies")
@@ -120,7 +117,7 @@ namespace biometricService.Services
         public async Task<CreateReferenceFaceResponse> CreateReferenceFace(CreateReferenceFaceRequest request)
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
                 var data = new ReferenceFaceRequest
@@ -171,7 +168,7 @@ namespace biometricService.Services
                 };
 
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
 
             var request = new HttpRequestMessage(HttpMethod.Get, $"/identity/api/v1/faces/{faceId}/crop/removed-background")
             {
@@ -221,7 +218,7 @@ namespace biometricService.Services
         public async Task<ScoreResponse> EvaluateLivenesSelfie(Guid customerId)
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
                 var referenceFaceRequest = new PassiveLivenessTypeRequest { type = "PASSIVE_LIVENESS" };

@@ -109,7 +109,7 @@ namespace biometricService.Services
         private async Task<ScoreResponse> ProbeFaceToReferenceFace(Guid probeFaceId, Guid referenceFaceId)
         {
             HttpClient client = _httpClientFactory.CreateClient();
-            client.BaseAddress = new Uri("https://dot.innovatrics.com");
+            client.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
             try
             {
 
