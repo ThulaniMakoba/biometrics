@@ -1,4 +1,5 @@
 ﻿using biometricService.Interfaces;
+using biometricService.Models;
 using System.Net;
 using System.Net.Http.Formatting;
 
@@ -7,14 +8,15 @@ namespace biometricService.Http
     public class HttpService : IHttpService
     {
         private readonly HttpClient _httpClient;
-
         private readonly ITokenService _tokenService;
+        private readonly AppSettings _appSettings;
 
-        public HttpService(HttpClient client, ITokenService tokenService)
+        public HttpService(HttpClient client, ITokenService tokenService, AppSettings appSettings)
         {
             _tokenService = tokenService;
+            _appSettings = appSettings;
             _httpClient = client;
-            _httpClient.BaseAddress = new Uri("https://dot.innovatrics.com");
+            _httpClient.BaseAddress = new Uri(_appSettings.InnovatricsUrl);
         }
 
         public async Task<TResult> PostAsync<TRequest, TResult>(string endpoint, TRequest data)
@@ -105,11 +107,9 @@ namespace biometricService.Http
 
         private void AddAuthorizationHeader(HttpRequestMessage request)
         {
-            string token = _tokenService.GetToken();
-
-            if (!string.IsNullOrEmpty(token))
+            if (!string.IsNullOrEmpty(_appSettings.InnovatricsApiKey))
             {
-                _tokenService.AddBearerToken(request, token);
+                _tokenService.AddBearerToken(request, _appSettings.InnovatricsApiKey);
             }
         }
     }

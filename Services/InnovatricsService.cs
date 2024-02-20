@@ -248,11 +248,9 @@ namespace biometricService.Services
 
         private void AddAuthorizationHeader(HttpRequestMessage request)
         {
-            string token = _tokenService.GetToken();
-
-            if (!string.IsNullOrEmpty(token))
+            if (!string.IsNullOrEmpty(_appSettings.InnovatricsApiKey))
             {
-                _tokenService.AddBearerToken(request, token);
+                _tokenService.AddBearerToken(request, _appSettings.InnovatricsApiKey);
             }
         }
 
